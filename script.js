@@ -108,7 +108,15 @@ function doRegister() {
   const name  = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const pass  = document.getElementById('regPassword').value;
-  if (!name || !email || !pass) { showAuthError('regError', 'All fields are required.'); return; }
+
+  if (!name) { showAuthError('regError', 'Name is required.'); return; }
+  if (!/^[a-zA-Z\s]+$/.test(name)) { showAuthError('regError', 'Name must contain letters only (no numbers or symbols).'); return; }
+  if (!email) { showAuthError('regError', 'Email is required.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showAuthError('regError', 'Enter a valid email address (e.g. name@email.com).'); return; }
+  if (!pass) { showAuthError('regError', 'Password is required.'); return; }
+  if (pass.length < 6) { showAuthError('regError', 'Password must be at least 6 characters.'); return; }
+  if (!/\d/.test(pass)) { showAuthError('regError', 'Password must contain at least one number.'); return; }
+
   const users = getUsers();
   if (users.find(u => u.email === email)) { showAuthError('regError', 'Email already registered.'); return; }
   const newUser = { id: 'u' + Date.now(), name, email, password: pass, role: 'user', created: Date.now(), defaultTone: 'formal', defaultMode: 'offline' };
@@ -905,14 +913,49 @@ async function improveEmail() {
   const outEl = document.getElementById('improveOutput');
   showLoadingInEl(outEl);
 
-  const result = await callAITool(
-    `You are an expert email editor. ${goal === 'professional' ? 'Make the email more professional.' : goal === 'grammar' ? 'Fix all grammar and spelling errors while preserving meaning.' : goal === 'concise' ? 'Make the email more concise and to the point.' : goal === 'detailed' ? 'Add more detail and depth.' : 'Make the email friendlier and warmer.'} Return only the improved email, no explanation.`,
-    'Improve this email:\n\n' + text
-  );
+  let improved = text;
 
-  outEl.className = 'email-box';
-  outEl.textContent = result;
-  saveToAnalytics('improve', 'ai', 'ai');
+  if (goal === 'professional') {
+    improved = text
+      .replace(/\bhi\b/gi, 'Dear').replace(/\bhey\b/gi, 'Dear')
+      .replace(/\bthanks\b/gi, 'Thank you').replace(/\bthx\b/gi, 'Thank you')
+      .replace(/\bplease\b/gi, 'Kindly').replace(/\basap\b/gi, 'at the earliest convenience')
+      .replace(/\bget back to you\b/gi, 'revert to you')
+      .replace(/\bsorry\b/gi, 'I apologize')
+      .replace(/\bcant\b/gi, 'cannot').replace(/\bdont\b/gi, 'do not')
+      .replace(/\bwont\b/gi, 'will not').replace(/\bisnt\b/gi, 'is not')
+      .replace(/\bi'm\b/gi, 'I am').replace(/\bit's\b/gi, 'it is')
+      .replace(/\bwe're\b/gi, 'we are').replace(/\byou're\b/gi, 'you are');
+    improved = '[✅ Professional Tone Applied]\n\n' + improved;
+
+  } else if (goal === 'grammar') {
+    improved = text
+      .replace(/\bi\b/g, 'I').replace(/\bcant\b/gi, "can't")
+      .replace(/\bdont\b/gi, "don't").replace(/\bwont\b/gi, "won't")
+      .replace(/\bisnt\b/gi, "isn't").replace(/\bim\b/gi, "I'm")
+      .replace(/  +/g, ' ').trim();
+    improved = '[✅ Grammar Fixed]\n\n' + improved;
+
+  } else if (goal === 'concise') {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10).slice(0, 5);
+    improved = '[✅ Made Concise]\n\n' + sentences.join('. ').trim() + '.';
+
+  } else if (goal === 'detailed') {
+    improved = '[✅ More Detailed]\n\n' + text + '\n\nPlease do not hesitate to contact me should you require any additional information or clarification regarding the above matter. I remain available at your convenience.';
+
+  } else if (goal === 'friendly') {
+    improved = text
+      .replace(/\bDear\b/gi, 'Hi').replace(/\bKindly\b/gi, 'Please')
+      .replace(/\bYours faithfully\b/gi, 'Cheers').replace(/\bYours sincerely\b/gi, 'Best')
+      .replace(/\bBest regards\b/gi, 'Take care').replace(/\bdo not\b/gi, "don't");
+    improved = '[✅ Friendly Tone Applied]\n\n' + improved;
+  }
+
+  setTimeout(() => {
+    outEl.className = 'email-box';
+    outEl.textContent = improved;
+    saveToAnalytics('improve', 'offline', 'offline');
+  }, 800);
 }
 
 async function convertTone() {
