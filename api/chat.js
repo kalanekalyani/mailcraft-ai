@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer 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',
+        'Authorization': 'Bearer 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',
         'HTTP-Referer': 'https://mailcraft-ai-wz9e.vercel.app',
         'X-Title': 'MailCraft AI'
       },
