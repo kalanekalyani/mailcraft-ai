@@ -967,18 +967,98 @@ async function convertTone() {
   const outEl = document.getElementById('toneOutput');
   showLoadingInEl(outEl);
 
-  const result = await callAITool(
-    `You are a tone conversion expert. Convert the given email from a ${from} tone to a ${to} tone. Keep the core meaning but completely change the style. Return only the converted email.`,
-    text
-  );
+  // Extract body (remove existing greeting/closing)
+  let body = text
+    .replace(/^(Dear|Hi|Hey|Hello|To)[^\n]*\n+/i, '')
+    .replace(/\n+(Yours faithfully|Warm regards|Cheers|Best regards|Thanks|With warmth|Regards|Sincerely)[^\n]*/i, '')
+    .trim();
 
-  outEl.className = 'email-box';
-  outEl.textContent = result;
+  // Extract sender name from closing if possible
+  const closingMatch = text.match(/\n(Yours faithfully|Warm regards|Cheers|Best regards|Thanks|With warmth|Regards|Sincerely)[,\n]+([A-Za-z ]+)/i);
+  const senderName = closingMatch ? closingMatch[2].trim() : (currentUser ? currentUser.name : 'Sender');
+
+  // Extract recipient from greeting
+  const greetMatch = text.match(/^(?:Dear|Hi|Hey|Hello)\s+([A-Za-z ]+)[,\n]/i);
+  const recipientName = greetMatch ? greetMatch[1].trim() : 'Recipient';
+
+  // Apply tone transformations
+  const toneTemplates = {
+    formal: {
+      greeting: `Dear ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bhi\b/gi, 'Dear').replace(/\bhey\b/gi, 'Greetings')
+        .replace(/\bthanks\b/gi, 'Thank you').replace(/\bsorry\b/gi, 'I apologize')
+        .replace(/\bcant\b/gi, 'cannot').replace(/\bdont\b/gi, 'do not')
+        .replace(/\bwont\b/gi, 'will not').replace(/\bi'm\b/gi, 'I am')
+        .replace(/\bit's\b/gi, 'it is').replace(/\bwe're\b/gi, 'we are')
+        .replace(/\byou're\b/gi, 'you are').replace(/\bplease\b/gi, 'Kindly'),
+      closing: `Yours faithfully,\n${senderName}`
+    },
+    polite: {
+      greeting: `Dear ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bcant\b/gi, "cannot").replace(/\bdont\b/gi, "do not")
+        .replace(/\bsorry\b/gi, 'I sincerely apologize')
+        .replace(/\bthanks\b/gi, 'Thank you so much')
+        .replace(/\bplease\b/gi, 'I kindly request you to'),
+      closing: `Warm regards,\n${senderName}`
+    },
+    friendly: {
+      greeting: `Hi ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bDear\b/gi, 'Hey').replace(/\bKindly\b/gi, 'Please')
+        .replace(/\bI am writing to\b/gi, "Just wanted to")
+        .replace(/\bcannot\b/gi, "can't").replace(/\bdo not\b/gi, "don't")
+        .replace(/\bwill not\b/gi, "won't").replace(/\bI am\b/g, "I'm")
+        .replace(/\bThank you\b/gi, 'Thanks').replace(/\bI apologize\b/gi, "Sorry")
+        .replace(/\bat your earliest convenience\b/gi, 'whenever you get a chance'),
+      closing: `Cheers,\n${senderName}`
+    },
+    professional: {
+      greeting: `Dear ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bhi\b/gi, 'Hello').replace(/\bhey\b/gi, 'Hello')
+        .replace(/\bthanks\b/gi, 'Thank you').replace(/\bsorry\b/gi, 'I apologize')
+        .replace(/\bcant\b/gi, 'cannot').replace(/\bdont\b/gi, 'do not')
+        .replace(/\bi'm\b/gi, 'I am').replace(/\bit's\b/gi, 'it is')
+        .replace(/\bASAP\b/gi, 'at the earliest').replace(/\bget back\b/gi, 'revert'),
+      closing: `Best regards,\n${senderName}`
+    },
+    casual: {
+      greeting: `Hey ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bDear\b/gi, 'Hey').replace(/\bI am writing to inform you\b/gi, "Just letting you know")
+        .replace(/\bcannot\b/gi, "can't").replace(/\bdo not\b/gi, "don't")
+        .replace(/\bwill not\b/gi, "won't").replace(/\bI am\b/g, "I'm")
+        .replace(/\bThank you\b/gi, 'Thanks').replace(/\bKindly\b/gi, 'Please')
+        .replace(/\bat the earliest convenience\b/gi, 'when you can')
+        .replace(/\bI apologize\b/gi, 'Sorry about that'),
+      closing: `Thanks,\n${senderName}`
+    },
+    empathetic: {
+      greeting: `Dear ${recipientName},`,
+      bodyTransform: (b) => b
+        .replace(/\bI am writing to\b/gi, "I wanted to personally reach out to")
+        .replace(/\bPlease\b/gi, 'I kindly ask that you')
+        .replace(/\bThank you\b/gi, 'I truly appreciate')
+        .replace(/\bI apologize\b/gi, "I sincerely apologize and understand how this may have affected you"),
+      closing: `With warmth,\n${senderName}`
+    }
+  };
+
+  const template = toneTemplates[to] || toneTemplates.professional;
+  const convertedBody = template.bodyTransform(body);
+  const result = `[✅ Converted: ${cap(from)} → ${cap(to)}]\n\n${template.greeting}\n\n${convertedBody}\n\n${template.closing}`;
+
+  setTimeout(() => {
+    outEl.className = 'email-box';
+    outEl.textContent = result;
+  }, 800);
 }
 
 async function generateReply() {
   const text   = document.getElementById('replyInput').value.trim();
-  const sender = document.getElementById('replySender').value.trim();
+  const sender = document.getElementById('replySender').value.trim() || (currentUser ? currentUser.name : 'Me');
   const tone   = document.getElementById('replyTone').value;
   const intent = document.getElementById('replyIntent').value.trim();
   if (!text) { alert('Please paste the received email.'); return; }
@@ -986,13 +1066,90 @@ async function generateReply() {
   const outEl = document.getElementById('replyOutput');
   showLoadingInEl(outEl);
 
-  const result = await callAITool(
-    `You are an expert email reply writer. Write ${tone} replies that sound natural and human.`,
-    `Write a reply to this email.\nMy name: ${sender || 'me'}\nMy intent: ${intent || 'Reply appropriately'}\nTone: ${tone}\n\nOriginal email:\n${text}`
-  );
+  // Extract recipient name from original email sender
+  const fromMatch = text.match(/(?:regards|sincerely|thanks|cheers|warmly)[,\n]+([A-Za-z ]+)/i);
+  const recipient = fromMatch ? fromMatch[1].trim() : 'there';
 
-  outEl.className = 'email-box';
-  outEl.textContent = result;
+  const intentLower = intent.toLowerCase();
+
+  const replyTemplates = {
+    formal: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? 'I am pleased to confirm my acceptance of the matter raised in your correspondence.'
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? 'After careful deliberation, I regret to inform you that I am unable to proceed with this request at the present time.'
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? 'I am writing to seek further clarification regarding the matter outlined in your communication.'
+        : intentLower.includes('follow') || intentLower.includes('update')
+        ? 'I am following up with regard to my previous correspondence and would appreciate an update at your earliest convenience.'
+        : 'I acknowledge receipt of your communication and wish to respond accordingly.';
+      return `Dear ${recipient},\n\nThank you for your email. ${opening}\n\n${intent ? 'Regarding your query: ' + intent + '.' : 'I trust this response addresses the matter satisfactorily.'} Please do not hesitate to contact me should you require any further clarification.\n\nYours faithfully,\n${sender}`;
+    },
+    polite: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? 'I am delighted to confirm that I am happy to proceed as discussed.'
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? 'Thank you for reaching out. After thoughtful consideration, I am afraid I am unable to accommodate this request at this time.'
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? 'Could you kindly provide a little more information about the matter you mentioned?'
+        : 'I appreciate you taking the time to reach out to me.';
+      return `Dear ${recipient},\n\nThank you so much for your email. ${opening}\n\n${intent ? intent + '.' : 'I hope this response is helpful.'} Please feel free to reach out if you need anything further — I am always happy to assist.\n\nWarm regards,\n${sender}`;
+    },
+    friendly: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? "Sounds great — I'm totally on board with this!"
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? "Thanks for thinking of me! Unfortunately I won't be able to make this work right now."
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? "Quick question — could you give me a bit more detail on what you meant?"
+        : intentLower.includes('follow') || intentLower.includes('update')
+        ? "Hey, just wanted to follow up on this — any updates?"
+        : "Thanks for getting in touch!";
+      return `Hi ${recipient},\n\nThanks for your email! ${opening}\n\n${intent ? intent + '.' : "Let me know if there's anything else I can help with."} Feel free to ping me anytime!\n\nCheers,\n${sender}`;
+    },
+    professional: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? 'I confirm my agreement and am ready to move forward.'
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? 'After reviewing this carefully, I am unable to proceed with this at this time.'
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? 'Could you provide additional details to help me better understand your requirements?'
+        : intentLower.includes('follow') || intentLower.includes('update')
+        ? 'I am following up on my previous message and would appreciate a status update.'
+        : 'Thank you for reaching out.';
+      return `Dear ${recipient},\n\nThank you for your email. ${opening}\n\n${intent ? intent + '.' : 'Please let me know if you need anything further.'} Looking forward to your response.\n\nBest regards,\n${sender}`;
+    },
+    casual: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? "Yeah, I'm in! Let's do it."
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? "Hey, thanks for reaching out. I can't make this work right now though."
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? "Hey, can you clarify what you meant by that?"
+        : intentLower.includes('follow') || intentLower.includes('update')
+        ? "Hey, just checking in on this — any news?"
+        : "Got your message, thanks!";
+      return `Hey ${recipient},\n\n${opening}\n\n${intent ? intent + '.' : "Let me know what you think."} Talk soon!\n\nThanks,\n${sender}`;
+    },
+    empathetic: () => {
+      const opening = intentLower.includes('accept') || intentLower.includes('agree')
+        ? 'I completely understand your situation and I am genuinely happy to help and move forward with this.'
+        : intentLower.includes('decline') || intentLower.includes('reject')
+        ? 'I truly appreciate you reaching out, and I understand this may be disappointing — unfortunately, I am unable to proceed at this time.'
+        : intentLower.includes('clarif') || intentLower.includes('question')
+        ? 'I want to make sure I fully understand your situation before responding — could you share a bit more detail?'
+        : 'Thank you for reaching out. I can imagine this may not have been easy, and I want you to know I am here to help.';
+      return `Dear ${recipient},\n\nThank you for your email. ${opening}\n\n${intent ? intent + '.' : 'Please know that I am here for you and happy to support in any way I can.'} Do not hesitate to reach out — I genuinely care about resolving this for you.\n\nWith warmth,\n${sender}`;
+    }
+  };
+
+  const replyFn = replyTemplates[tone] || replyTemplates.professional;
+  const result = '[✅ Smart Reply — ' + cap(tone) + ' Tone]\n\n' + replyFn();
+
+  setTimeout(() => {
+    outEl.className = 'email-box';
+    outEl.textContent = result;
+  }, 800);
 }
 
 async function summarizeEmail() {
@@ -1003,12 +1160,37 @@ async function summarizeEmail() {
   const outEl = document.getElementById('summaryOutput');
   showLoadingInEl(outEl);
 
-  const prompt = style === 'brief' ? 'Summarize in 2-3 sentences.' : style === 'bullets' ? 'Summarize as bullet points with key information.' : 'Write a detailed summary covering all important points.';
+  // Extract sentences from the email
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+  const subjectMatch = text.match(/Subject:\s*(.+)/i);
+  const subject = subjectMatch ? subjectMatch[1].trim() : '';
 
-  const result = await callAITool('You are an email summarization expert. ' + prompt + ' Be clear and concise.', 'Summarize:\n\n' + text);
+  let result = '';
 
-  outEl.className = 'email-box';
-  outEl.textContent = result;
+  if (style === 'brief') {
+    const brief = sentences.slice(0, 3).join('. ').trim();
+    result = '[✅ Brief Summary]\n\n' + (subject ? 'Subject: ' + subject + '\n\n' : '') + brief + (brief.endsWith('.') ? '' : '.');
+
+  } else if (style === 'bullets') {
+    const points = sentences.slice(0, 6);
+    result = '[✅ Key Points Summary]\n\n' + (subject ? 'Subject: ' + subject + '\n\n' : '') +
+      'Key points from this email:\n\n' + points.map(p => '• ' + p.trim() + '.').join('\n');
+
+  } else {
+    // detailed
+    const allPoints = sentences.slice(0, 8);
+    result = '[✅ Detailed Summary]\n\n' +
+      (subject ? 'Subject: ' + subject + '\n\n' : '') +
+      'Overview:\n' + allPoints.slice(0, 2).join('. ') + '.\n\n' +
+      'Details:\n' + allPoints.slice(2, 6).map(p => '• ' + p.trim() + '.').join('\n') +
+      (allPoints.length > 6 ? '\n\nAdditional Notes:\n' + allPoints.slice(6).join('. ') + '.' : '') +
+      '\n\nConclusion:\nThis email requires your attention and may need a follow-up response.';
+  }
+
+  setTimeout(() => {
+    outEl.className = 'email-box';
+    outEl.textContent = result;
+  }, 800);
 }
 
 async function callAITool(system, userMsg) {
