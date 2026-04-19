@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MailCraft AI — Human Emails, Instantly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">✦</div>
+      <h1>MailCraft <em>AI</em></h1>
+      <p>Write human-sounding emails in seconds</p>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm" class="auth-form active">
+      <h2>Welcome back</h2>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••"/>
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-submit" onclick="doLogin()">Sign In</button>
+      <p class="auth-switch">No account? <a href="#" onclick="showRegister()">Create one</a></p>
+      <div class="auth-demo">
+        <p>Try a demo account:</p>
+        <span onclick="fillDemo('user@demo.com','demo123')">👤 User</span>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerForm" class="auth-form">
+      <h2>Create account</h2>
+      <div class="auth-field">
+        <label>Full Name</label>
+        <input type="text" id="regName" placeholder="Kalyani Kalane"/>
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Choose a password"/>
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="auth-submit" onclick="doRegister()">Create Account</button>
+      <p class="auth-switch">Have an account? <a href="#" onclick="showLogin()">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">✦</span>
+      <span class="brand-name">MailCraft</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-page="generator" onclick="switchPage('generator')">
+        <span class="nav-icon">✉</span><span>Generate</span>
+      </a>
+      <a class="nav-item" data-page="improve" onclick="switchPage('improve')">
+        <span class="nav-icon">✦</span><span>Improve Email</span>
+      </a>
+      <a class="nav-item" data-page="tone" onclick="switchPage('tone')">
+        <span class="nav-icon">🎭</span><span>Tone Converter</span>
+      </a>
+      <a class="nav-item" data-page="reply" onclick="switchPage('reply')">
+        <span class="nav-icon">↩</span><span>Smart Reply</span>
+      </a>
+      <a class="nav-item" data-page="summary" onclick="switchPage('summary')">
+        <span class="nav-icon">📋</span><span>Summarize</span>
+      </a>
+      <a class="nav-item" data-page="history" onclick="switchPage('history')">
+        <span class="nav-icon">📂</span><span>History</span>
+        <span class="nav-badge" id="historyBadge">0</span>
+      </a>
+      <a class="nav-item" data-page="drafts" onclick="switchPage('drafts')">
+        <span class="nav-icon">📝</span><span>Drafts</span>
+        <span class="nav-badge" id="draftsBadge">0</span>
+      </a>
+      <a class="nav-item" data-page="analytics" onclick="switchPage('analytics')">
+        <span class="nav-icon">📊</span><span>Analytics</span>
+      </a>
+      <a class="nav-item" data-page="settings" onclick="switchPage('settings')">
+        <span class="nav-icon">⚙</span><span>Settings</span>
+      </a>
+      <a class="nav-item admin-only hidden" data-page="admin" onclick="switchPage('admin')">
+        <span class="nav-icon">🛡</span><span>Admin</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">R</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">User</div>
+        <div class="user-role" id="sidebarRole">Member</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Logout">↪</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">Email Generator</div>
+      <div id="planBadge" class="plan-badge"></div>
+      <div class="mode-toggle">
+        <span class="mode-label">Mode:</span>
+        <div class="toggle-switch">
+          <button class="toggle-opt active" id="modeOffline" onclick="setMode('offline')">⚡ Offline</button>
+          <button class="toggle-opt" id="modeAI" onclick="setMode('ai')">✨ AI</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGES -->
+
+    <!-- ── GENERATOR PAGE ── -->
+    <div class="page active" id="page-generator">
+      <div class="gen-layout">
+
+        <!-- INPUT PANEL -->
+        <div class="panel">
+          <div class="panel-title">✉ Email Details</div>
+
+          <div class="row-2">
+            <div class="field">
+              <label>Your Name</label>
+              <input type="text" id="senderName" placeholder="e.g. Kalyani Kalane"/>
+            </div>
+            <div class="field">
+              <label>To (Receiver / Title)</label>
+              <input type="text" id="receiverName" placeholder="e.g. HR Manager"/>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Email Purpose</label>
+            <select id="emailType" onchange="onTypeChange()">
+              <optgroup label="── Job & Career ──">
+                <option value="job_application">Job Application</option>
+                <option value="resume_submission">Resume / CV Submission</option>
+                <option value="cover_letter">Cover Letter Email</option>
+                <option value="interview_request">Interview Request</option>
+                <option value="interview_followup">Interview Follow-up</option>
+                <option value="offer_acceptance">Offer Acceptance</option>
+                <option value="offer_rejection">Offer Rejection</option>
+              </optgroup>
+              <optgroup label="── Business ──">
+                <option value="inquiry">Inquiry Email</option>
+                <option value="complaint">Complaint Email</option>
+                <option value="feedback">Feedback Email</option>
+                <option value="request">General Request</option>
+                <option value="proposal">Proposal Email</option>
+                <option value="file_request">File / Document Request</option>
+                <option value="billing">Billing / Payment Email</option>
+              </optgroup>
+              <optgroup label="── Academic ──">
+                <option value="leave_application">Leave Application</option>
+                <option value="assignment_submission">Assignment Submission</option>
+                <option value="request_professor">Request to Professor</option>
+                <option value="recommendation_request">Recommendation Letter Request</option>
+              </optgroup>
+              <optgroup label="── Workplace ──">
+                <option value="sick_leave">Sick Leave Application</option>
+                <option value="meeting_invitation">Meeting Invitation</option>
+                <option value="meeting_followup">Meeting Follow-up / MOM</option>
+                <option value="announcement">Notice / Announcement</option>
+                <option value="apology">Apology Email</option>
+                <option value="resignation">Resignation Email</option>
+              </optgroup>
+              <optgroup label="── Personal ──">
+                <option value="friendly_chat">Friendly Chat Email</option>
+                <option value="catchup">Catch-up Email</option>
+                <option value="thank_you">Thank You Email</option>
+                <option value="congratulations">Congratulations</option>
+                <option value="birthday">Birthday Wishes</option>
+                <option value="invitation">Invitation (Party / Event)</option>
+                <option value="support">Support / Care Message</option>
+              </optgroup>
+              <optgroup label="── E-commerce / System ──">
+                <option value="order_confirmation">Order Confirmation</option>
+                <option value="shipping_update">Shipping Update</option>
+                <option value="refund">Refund / Cancellation</option>
+                <option value="newsletter">Newsletter</option>
+                <option value="promotional">Promotional Offer</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div id="dynamicFields"></div>
+
+          <div class="field">
+            <label>Tone</label>
+            <div class="tone-grid" id="toneGrid">
+              <button class="tone-btn active" data-tone="formal" onclick="selectTone(this)"><span class="ti">🏛️</span><span class="tn">Formal</span></button>
+              <button class="tone-btn" data-tone="polite" onclick="selectTone(this)"><span class="ti">🤝</span><span class="tn">Polite</span></button>
+              <button class="tone-btn" data-tone="friendly" onclick="selectTone(this)"><span class="ti">😊</span><span class="tn">Friendly</span></button>
+              <button class="tone-btn" data-tone="professional" onclick="selectTone(this)"><span class="ti">💼</span><span class="tn">Professional</span></button>
+              <button class="tone-btn" data-tone="casual" onclick="selectTone(this)"><span class="ti">💬</span><span class="tn">Casual</span></button>
+              <button class="tone-btn" data-tone="empathetic" onclick="selectTone(this)"><span class="ti">❤️</span><span class="tn">Empathetic</span></button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Additional Context</label>
+            <textarea id="extraDetails" placeholder="Write short notes or full sentences…&#10;e.g. sick yesterday, fever, need 2 days rest"></textarea>
+            <div class="word-count"><span id="wordCount">0</span> words · <span id="contextHint" style="color:var(--ai-color)"></span></div>
+          </div>
+
+          <div class="error-msg" id="errorMsg"></div>
+
+          <div class="btn-row">
+            <button class="gen-btn" id="genBtn" onclick="generateEmail()">
+              <span>✨</span> Generate Email
+            </button>
+            <button class="draft-save-btn" onclick="saveDraft()" title="Save as Draft">💾</button>
+          </div>
+        </div>
+
+        <!-- OUTPUT PANEL -->
+        <div class="output-panel">
+          <div class="output-header">
+            <div class="output-title">📨 Your Email</div>
+            <div class="output-actions-top">
+              <span class="meta-badge" id="metaBadge">—</span>
+            </div>
+          </div>
+
+          <div class="email-box empty" id="emailBox">
+            <span class="empty-icon">✉️</span>
+            <span>Your email will appear here…</span>
+          </div>
+
+          <!-- SCORING -->
+          <div class="score-card hidden" id="scoreCard">
+            <div class="score-title">📊 Email Score</div>
+            <div class="score-bars">
+              <div class="score-row"><span>Professionalism</span><div class="score-bar"><div class="score-fill" id="scorePro"></div></div><span id="scoreProVal">—</span></div>
+              <div class="score-row"><span>Clarity</span><div class="score-bar"><div class="score-fill" id="scoreCla"></div></div><span id="scoreClaVal">—</span></div>
+              <div class="score-row"><span>Tone Match</span><div class="score-bar"><div class="score-fill" id="scoreTon"></div></div><span id="scoreTonVal">—</span></div>
+            </div>
+          </div>
+
+          <!-- FEEDBACK -->
+          <div class="feedback-row hidden" id="feedbackRow">
+            <span class="fb-label">Rate this email:</span>
+            <div class="stars" id="starRating">
+              <span onclick="rateStar(1)">★</span>
+              <span onclick="rateStar(2)">★</span>
+              <span onclick="rateStar(3)">★</span>
+              <span onclick="rateStar(4)">★</span>
+              <span onclick="rateStar(5)">★</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="action-btn copy-btn" onclick="copyEmail()">📋 Copy</button>
+            <button class="action-btn save-btn" onclick="saveToHistory()">💾 Save</button>
+            <button class="action-btn variations-btn" onclick="generateVariations()">🔄 Variations</button>
+            <button class="action-btn clear-btn" onclick="clearAll()">🗑️ Clear</button>
+          </div>
+
+          <!-- VARIATIONS -->
+          <div class="variations-panel hidden" id="variationsPanel">
+            <div class="var-title">🔄 Email Variations</div>
+            <div id="variationsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── IMPROVE PAGE ── -->
+    <div class="page hidden" id="page-improve">
+      <div class="tool-layout">
+        <div class="tool-card">
+          <div class="tool-card-title">✦ Improve Email</div>
+          <p class="tool-desc">Paste your rough email below. AI will rewrite it professionally, fix grammar, and improve clarity.</p>
+          <div class="field">
+            <label>Your Rough Email</label>
+            <textarea id="improveInput" placeholder="Paste your draft email here…" style="min-height:180px"></textarea>
+          </div>
+          <div class="field">
+            <label>Improvement Goal</label>
+            <select id="improveGoal">
+              <option value="professional">Make it more professional</option>
+              <option value="grammar">Fix grammar & spelling</option>
+              <option value="concise">Make it more concise</option>
+              <option value="detailed">Add more detail</option>
+              <option value="friendly">Make it friendlier</option>
+            </select>
+          </div>
+          <button class="gen-btn" onclick="improveEmail()"><span>✦</span> Improve Email</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-title">📨 Improved Version</div>
+          <div class="email-box empty" id="improveOutput" style="min-height:300px">
+            <span class="empty-icon">✦</span><span>Improved email appears here…</span>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="action-btn copy-btn" onclick="copyFromEl('improveOutput')">📋 Copy</button>
+            <button class="action-btn save-btn" onclick="saveImproved()">💾 Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TONE CONVERTER PAGE ── -->
+    <div class="page hidden" id="page-tone">
+      <div class="tool-layout">
+        <div class="tool-card">
+          <div class="tool-card-title">🎭 Tone Converter</div>
+          <p class="tool-desc">Convert your email from one tone to another. Casual → Professional, Formal → Friendly, Angry → Polite.</p>
+          <div class="field">
+            <label>Original Email</label>
+            <textarea id="toneInput" placeholder="Paste your email here…" style="min-height:180px"></textarea>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label>From Tone</label>
+              <select id="toneFrom">
+                <option value="casual">Casual</option>
+                <option value="formal">Formal</option>
+                <option value="angry">Angry / Frustrated</option>
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>To Tone</label>
+              <select id="toneTo">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="polite">Polite</option>
+                <option value="formal">Formal</option>
+                <option value="casual">Casual</option>
+              </select>
+            </div>
+          </div>
+          <button class="gen-btn" onclick="convertTone()"><span>🎭</span> Convert Tone</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-title">📨 Converted Email</div>
+          <div class="email-box empty" id="toneOutput" style="min-height:300px">
+            <span class="empty-icon">🎭</span><span>Converted email appears here…</span>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="action-btn copy-btn" onclick="copyFromEl('toneOutput')">📋 Copy</button>
+            <button class="action-btn save-btn" onclick="saveToneConverted()">💾 Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SMART REPLY PAGE ── -->
+    <div class="page hidden" id="page-reply">
+      <div class="tool-layout">
+        <div class="tool-card">
+          <div class="tool-card-title">↩ Smart Reply</div>
+          <p class="tool-desc">Paste an email you received. AI will generate the perfect reply for you.</p>
+          <div class="field">
+            <label>Received Email</label>
+            <textarea id="replyInput" placeholder="Paste the email you want to reply to…" style="min-height:180px"></textarea>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label>Your Name</label>
+              <input type="text" id="replySender" placeholder="Your name"/>
+            </div>
+            <div class="field">
+              <label>Reply Tone</label>
+              <select id="replyTone">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="formal">Formal</option>
+                <option value="brief">Brief & Direct</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Your Intent (optional)</label>
+            <input type="text" id="replyIntent" placeholder="e.g. Accept the meeting, Decline politely, Ask for clarification"/>
+          </div>
+          <button class="gen-btn" onclick="generateReply()"><span>↩</span> Generate Reply</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-title">📨 Generated Reply</div>
+          <div class="email-box empty" id="replyOutput" style="min-height:300px">
+            <span class="empty-icon">↩</span><span>Reply appears here…</span>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="action-btn copy-btn" onclick="copyFromEl('replyOutput')">📋 Copy</button>
+            <button class="action-btn save-btn" onclick="saveReply()">💾 Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SUMMARY PAGE ── -->
+    <div class="page hidden" id="page-summary">
+      <div class="tool-layout">
+        <div class="tool-card">
+          <div class="tool-card-title">📋 Email Summarizer</div>
+          <p class="tool-desc">Paste a long email to get a concise, clear summary with key points.</p>
+          <div class="field">
+            <label>Long Email</label>
+            <textarea id="summaryInput" placeholder="Paste the email to summarize…" style="min-height:200px"></textarea>
+          </div>
+          <div class="field">
+            <label>Summary Style</label>
+            <select id="summaryStyle">
+              <option value="brief">Brief (2-3 sentences)</option>
+              <option value="bullets">Bullet points</option>
+              <option value="detailed">Detailed summary</option>
+            </select>
+          </div>
+          <button class="gen-btn" onclick="summarizeEmail()"><span>📋</span> Summarize</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-title">✦ Summary</div>
+          <div class="email-box empty" id="summaryOutput" style="min-height:300px">
+            <span class="empty-icon">📋</span><span>Summary appears here…</span>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="action-btn copy-btn" onclick="copyFromEl('summaryOutput')">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY PAGE ── -->
+    <div class="page hidden" id="page-history">
+      <div class="page-header">
+        <h2>📂 Email History</h2>
+        <div class="filter-row">
+          <input type="text" id="historySearch" placeholder="Search emails…" oninput="renderHistory()"/>
+          <select id="historyFilter" onchange="renderHistory()">
+            <option value="">All Types</option>
+            <option value="job_application">Job Application</option>
+            <option value="sick_leave">Sick Leave</option>
+            <option value="complaint">Complaint</option>
+            <option value="thank_you">Thank You</option>
+          </select>
+          <button class="action-btn clear-btn" onclick="clearHistory()">🗑️ Clear All</button>
+        </div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+
+    <!-- ── DRAFTS PAGE ── -->
+    <div class="page hidden" id="page-drafts">
+      <div class="page-header">
+        <h2>📝 Saved Drafts</h2>
+      </div>
+      <div id="draftsList" class="history-list"></div>
+    </div>
+
+    <!-- ── ANALYTICS PAGE ── -->
+    <div class="page hidden" id="page-analytics">
+      <div class="page-header"><h2>📊 Your Analytics</h2></div>
+      <div class="stats-grid" id="analyticsStats"></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Most Used Email Types</div>
+          <div id="typeChart" class="bar-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Tone Usage</div>
+          <div id="toneChart" class="bar-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">AI vs Offline Usage</div>
+          <div id="modeChart" class="donut-chart-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS PAGE ── -->
+    <div class="page hidden" id="page-settings">
+      <div class="page-header"><h2>⚙ Settings</h2></div>
+      <div class="settings-grid">
+        <div class="settings-card">
+          <div class="settings-section-title">👤 Profile</div>
+          <div class="field"><label>Display Name</label><input type="text" id="settingName"/></div>
+          <div class="field"><label>Email</label><input type="email" id="settingEmail" disabled/></div>
+          <button class="gen-btn" style="margin-top:12px" onclick="saveProfile()">Save Profile</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-section-title">✉ Defaults</div>
+          <div class="field">
+            <label>Default Tone</label>
+            <select id="settingTone">
+              <option value="formal">Formal</option>
+              <option value="polite">Polite</option>
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+              <option value="casual">Casual</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Default Mode</label>
+            <select id="settingMode">
+              <option value="offline">Offline (Fast)</option>
+              <option value="ai">AI (Smart)</option>
+            </select>
+          </div>
+          <button class="gen-btn" style="margin-top:12px" onclick="saveSettings()">Save Settings</button>
+        </div>
+        <div class="settings-card">
+          <div class="settings-section-title">🔐 Account</div>
+          <div class="field"><label>Change Password</label><input type="password" id="newPassword" placeholder="New password"/></div>
+          <button class="gen-btn" style="margin-top:12px;background:var(--danger)" onclick="changePassword()">Update Password</button>
+          <button class="action-btn clear-btn" style="margin-top:10px;width:100%" onclick="doLogout()">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ADMIN PAGE ── -->
+    <div class="page hidden" id="page-admin">
+      <div class="page-header"><h2>🛡 Admin Dashboard</h2></div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="showAdminTab('users',this)">👥 Users</button>
+        <button class="admin-tab" onclick="showAdminTab('emails',this)">✉ All Emails</button>
+        <button class="admin-tab" onclick="showAdminTab('global-analytics',this)">📊 Analytics</button>
+        <button class="admin-tab" onclick="showAdminTab('feedback',this)">⭐ Feedback</button>
+      </div>
+
+      <div id="admin-users" class="admin-panel">
+        <div id="adminUsersList"></div>
+      </div>
+      <div id="admin-emails" class="admin-panel hidden">
+        <div id="adminEmailsList"></div>
+      </div>
+      <div id="admin-global-analytics" class="admin-panel hidden">
+        <div class="stats-grid" id="adminStats"></div>
+      </div>
+      <div id="admin-feedback" class="admin-panel hidden">
+        <div id="adminFeedbackList"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- UPGRADE POPUP -->
+<div id="upgradePopup" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#1a1a2e;border-radius:20px;padding:36px 32px;max-width:400px;width:90%;text-align:center;border:1px solid #534AB7">
+    <div style="font-size:2.5rem;margin-bottom:8px">✦</div>
+    <h2 style="margin:0 0 6px;font-size:1.3rem;color:#c4b5fd">You have used all 5 free emails today!</h2>
+    <p style="color:#888;font-size:0.88rem;margin:0 0 20px">Upgrade to Pro for unlimited emails, AI mode and more!</p>
+
+    <div style="background:#0d0d1a;border-radius:14px;padding:20px;margin-bottom:16px;border:1px solid #534AB7">
+      <div style="font-size:2rem;font-weight:700;color:#c4b5fd">₹299<span style="font-size:1rem;font-weight:400;color:#888">/month</span></div>
+      <div style="margin-top:14px;text-align:left;font-size:0.85rem;color:#a78bfa;line-height:2.2">
+        ✅ Unlimited emails every day<br>
+        ✅ AI mode fully unlocked<br>
+        ✅ All features — forever<br>
+        ✅ Priority support
+      </div>
+    </div>
+
+    <div style="background:#0d0d1a;border-radius:10px;padding:12px;margin-bottom:16px;font-size:0.82rem;color:#888;border:1px solid #333">
+      ⭐ <strong style="color:#c4b5fd">Earn credits by rating emails!</strong><br>
+      Every star you give = <strong style="color:#c4b5fd">2 credits</strong> · Collect 50 = 1 free Pro day!
+    </div>
+
+    <button onclick="activatePro()" style="width:100%;padding:13px;background:#534AB7;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;margin-bottom:10px">
+      ✦ Upgrade to Pro — ₹299/month
+    </button>
+    <button onclick="hideUpgradePopup()" style="width:100%;padding:10px;background:transparent;border:1px solid #444;border-radius:10px;font-size:0.9rem;cursor:pointer;color:#888">
+      Maybe later
+    </button>
+  </div>
+</div>
+
+<div class="copied-toast" id="toast">✓ Copied!</div>
+
+<script src="script.js"></script>
+</body>
+</html>
